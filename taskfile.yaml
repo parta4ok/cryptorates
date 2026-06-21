@@ -1,0 +1,35 @@
+version: "3"
+
+tasks:
+    generate_swagger_spec:
+        desc: "generate swagger spec from annotations"
+        cmds:
+            - swag init -g ./coin/internal/ports/http/public/doc.go -o ./coin/docs -ot json
+    infra_up:
+        desc: "start infrastructure (postgres)"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile services up -d
+
+    infra_down:
+        desc: "stop infrastructure"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml down
+
+    coin_run_local:
+        desc: "start coin service locally"
+        cmds:
+            - task: infra_up
+            - go run ./coin/cmd/app/main.go --config=./configs/coin.yaml
+    lint:
+        desc: "start golangci-lint"
+        cmds:
+            - golangci-lint run -c ./.golangci.yml ./...
+    service:up:
+        desc: "start crypto_rates locally in docker"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile services up --build -d
+    service:down:
+        desc: "stop crypto_rates containers"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile services down
+

@@ -1,0 +1,58 @@
+[
+	{
+		"label": "Go test with tags",
+		"command": "go",
+		"args": [
+			"test",
+			"-v",
+			"-tags=TEST_L1,TEST_L2,TEST_CONCURRENT",
+			"-run",
+			"^$ZED_SYMBOL$",
+			"$ZED_RELATIVE_FILE",
+		],
+		"cwd": "$ZED_WORKTREE_ROOT",
+		"tags": ["go-test"],
+	},
+	{
+		"label": "Go run all page tests",
+		"command": "go",
+		"args": [
+			"test",
+			"-v",
+			"-tags TEST_L1,TEST_L2,TEST_CONCURRENT",
+			"$ZED_RELATIVE_FILE",
+		],
+		"cwd": "$ZED_WORKTREE_ROOT",
+		"tags": ["go-test"],
+	},
+	{
+		"label": "Go get test coverage",
+		"command": "go",
+		"args": [
+			"test",
+			"-tags TEST_L1,TEST_L2,TEST_CONCURRENT",
+			"-coverprofile=coverage.out",
+			"./$ZED_RELATIVE_DIR",
+			"&& go tool cover -html=coverage.out -o coverage.html",
+			"&& (open coverage.html 2>/dev/null || xdg-open coverage.html)",
+		],
+		"use_new_terminal": false,
+		"allow_concurrent_runs": false,
+		"cwd": "$ZED_WORKTREE_ROOT",
+		"reveal": "always",
+	},
+	{
+		"label": "Go generate table test for current function",
+		"command": "gotests",
+		"args": [
+			"-w",
+			"-parallel",
+			"-only",
+			"$ZED_SYMBOL",
+			"$ZED_RELATIVE_FILE",
+		],
+		"cwd": "$ZED_WORKTREE_ROOT",
+		"tags": ["go-test"],
+		"use_new_terminal": false,
+	},
+]

@@ -1,0 +1,6 @@
+db_type: "postgres"
+migrations:
+  postgres:
+    - service_name: "coin"
+      connection_string: "postgres://user:password@postgres:5432/microservices?sslmode=disable"
+      migration_path: "file:///app/migrations/postgres"

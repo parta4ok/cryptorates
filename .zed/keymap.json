@@ -1,0 +1,12 @@
+[
+	{
+		"bindings": {
+			"cmd-k cmd-c": [
+				"task::Spawn",
+				{
+					"task_name": "Go get test coverage"
+				}
+			]
+		}
+	}
+]

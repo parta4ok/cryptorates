@@ -1,0 +1,71 @@
+services:
+    postgres:
+        image: postgres:16
+        restart: always
+        environment:
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: microservices
+        ports:
+            - "5432:5432"
+        networks:
+            - service_network
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U user -d microservices"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        profiles:
+            - services
+            - l1
+            - l2
+
+    migrator:
+        build:
+            context: ../../
+            dockerfile: tools/migrator/pg/dockerfile
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - service_network
+        profiles:
+            - services
+            - l1
+            - l2
+        restart: "no"
+
+    jaeger:
+        image: jaegertracing/all-in-one:latest
+        restart: always
+        ports:
+            - "16686:16686"
+            - "4318:4318"
+        networks:
+            - service_network
+        profiles:
+            - services
+            - l2
+
+    coin:
+        build:
+            context: ../../
+            dockerfile: build/docker/coin/Dockerfile
+        restart: always
+        env_file:
+            - ../../.env
+        ports:
+            - "8080:8080"
+            - "8083:8083"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - service_network
+        profiles:
+            - services
+            - l2
+
+networks:
+    service_network:
+        driver: bridge

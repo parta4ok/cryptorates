@@ -1,0 +1,22 @@
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /build
+
+COPY go.mod go.sum
+
+COPY . .
+RUN go mod download
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrator ./tools/migrator/pg
+
+FROM alpine:latest
+
+WORKDIR /app
+
+
+COPY --from=builder /build/migrator .
+COPY --from=builder /build/configs/migrator.yaml .
+COPY --from=builder /build/coin/migrations ./migrations
+# add new services here
+
+CMD ["./migrator", "--config=migrator.yaml"]

@@ -1,0 +1,26 @@
+service_name: coin_service
+version: 1.0
+
+port:
+    http:
+        public:
+            port: 8080
+            timeout: 3s
+cron:
+    actualize_rates:
+        interval: "@every 2m"
+storage:
+    type: postgres
+postgres:
+    connection_string: postgres://user:password@postgres:5432/microservices?sslmode=disable
+logger:
+    level: info
+    add_source: true
+tracing:
+    jaeger: jaeger:4318
+    switch_on: true
+metrics:
+    port: 8083
+    timeout: 3s
+gracefull_shutdown:
+    timeout: 5s

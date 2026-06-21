@@ -1,0 +1,573 @@
+# Курсы криптовалют
+
+## Задача
+
+Необходимо разработать сервис, который будет принимать на вход запросы со списком сокращенных названий
+криптовалют, например: BTC, ETH и, возвращать данные по запрашиваемым монетам, в частности: название и их стоимость.
+Необходимо, чтобы помимо запросов об актуальной стоимости, можно было передавать запросы в которые бы передавался
+параметр - название агрегирующей функции и этот запрос возвращал в зависимости от типа агрегирующей функции:
+минимальное, максимальное или среднее значение для выбраной монеты за текущий день.
+
+Сервис должен стоиться с применением методов построения REST API, концепции чистой архитектуры, кодовая база должна
+быть покрыта тестами, необходимая инфраструктура должна быть запущена в виде докер контейнеров.
+Проект должен итеративно пушится в репозиторий
+
+### Пример запроса и ответа
+
+#### пример запроса
+
+POST /crypto/v1/rates HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+```json
+{
+	"titles": ["BTC", "ETH"]
+}
+```
+
+#### пример ответа:
+
+```json
+{
+	"coins": [
+		{
+			"title": "BTC",
+			"cost": 67807.9609375,
+			"actual_at": "2026-03-31T00:00:00Z"
+		},
+		{
+			"title": "ETH",
+			"cost": 2066.030029296875,
+			"actual_at": "2026-03-31T00:00:00Z"
+		}
+	]
+}
+```
+
+# Итерация №1. Архитектурная задача.
+
+**Задача встречи**
+
+1. Рассказать студентам о диаграмме классов, диаграмме последовательностей;
+2. Применить принципы построения чистой архитектуры для решения поставленной задачи;
+3. Подробно рассмотреть слои и их назначения, обсудить взаимосвязь, через имплементацию интерфейсов;
+4. Рассказать про работу с ошибками, объяснить, что нужно стремиться к минимизации типов ошибок, при этом использовать враппинг, рассказать про [пакет](https://github.com/pkg/errors)
+5. Реализация древа каталогов согласно стандартного [проекта](https://github.com/golang-standards/project-layout)
+
+**Результат**
+
+1. Студент понимает предназначение слоев проекта.
+2. Студент готов реализовать слой entities.
+3. Студент понимает, что не нужно создавать уникальные ошибки для каждого случая, нужно использовать универсальные и врапать их.
+
+**Задание на следующую итерацию**
+
+1. Новый репозиторий (желательно github);
+2. Формирование примерной структуры проекта, опираясь на go standart layout;
+3. Готовый `entities` слой (помним про инкапсуляцию);
+4. Конструктор сущности `Coin` (помним про валидацию параметров);
+5. Ошибки конструктора создаются с враппингом;
+6. Тесты для `entities` слоя (пакет testify) покрыть `entities` на 100%.
+
+**Контрольные вопросы**
+
+- Если ты делаешь для каждого этапа валидации новую ошибку, то к чему это может привести? Как решить эту проблему?
+- Что будет, если оставить поля в структуре Coin - экспортируемыми?
+- Какие есть варианты решения проблемы?
+- Как сделать так, чтобы содержимое полей структуры Coin можно было посмотреть, но нельзя было изменить?
+- Почему лучше разделять пакеты для тестирования и с логикой, например: entities для Coin и entities_test для тестов конструктора и метода монет?
+- Чем отличается require от assert в testify и чем лучше пользоваться в нашем случае, почему?
+- Как сделать так, чтобы тесты могли запускаться параллельно?
+- Чем лучше табличное тестирование, чем индивидуальный тест для каждого кейса?
+
+**Примерная диаграмма классов**
+
+```mermaid
+classDiagram
+    Storage .. Coin: use
+    Provider .. Coin: use
+    Service *-- Storage
+    Service *-- Provider
+    PostgresStorage ..|> Storage
+    CryptoCompareProvider ..|> Provider
+    Service ..|> UseCaseProvider
+    Public *--UseCaseProvider
+
+
+    namespace entities {
+        class Coin{
+        -title string
+        -cost float64
+        -actualAt time.Time
+
+        +Title() string
+        +Cost() float64
+        +ActualAt() time.Time
+        }
+    }
+
+    namespace cases{
+        class Storage {
+            <<interface>>
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +Store(ctx context.Context, coins []*entities.Coin) error
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+        }
+
+        class Provider {
+            <<interface>>
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+        }
+
+        class Service {
+            -provider Provider
+            -storage Storage
+
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregateRates(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +ActualizeRates(ctx context.Context) error
+
+            -processUnstoredTitles(ctx context.Context, titles []string) error
+        }
+    }
+
+    namespace adapters{
+        class PostgresStorage{
+            -db *pgxpool.Pool
+
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +Store(ctx context.Context, coins []*entities.Coin) error
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            -processRows(ctx context.Context, query string, params []any) ([]*entities.Coin, error)
+        }
+
+        class CryptoCompareProvider {
+            -client *http.Client
+
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+        }
+    }
+
+    namespace port{
+        class UseCaseProvider{
+            <<interface>>
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregateRates(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +ActualizeRates(ctx context.Context) error
+
+        }
+
+        class Public{
+            router *http.Server
+
+            -actualRates(resp http.ResponseWriter, req *http.Request)
+            -aggregatedRates(resp http.ResponseWriter, req *http.Request)
+        }
+    }
+
+```
+
+# Итерация №2. Entities, Cases layers
+
+**Задача встречи**
+
+1. Проверка структуры каталогов
+2. Проверка `entities` слоя
+3. Создание сущности `service`;
+4. Демонстрация принципов инверсии зависимостей на примере `provider` и `storage`
+5. Создание конструктора (валидация объектов интерфейсов)
+6. Обстоятельно обсудить назначение интерфейсов, добиться понимания
+7. Устно проговорить реализацию методов.
+
+**Результат**
+
+1. Доработан при необходимости и согласован слой `entities`;
+2. Студент умеет замерять процент покрытия тестами нужные участки кода;
+3. Слой `entities` покрыт тестами на 100%;
+4. Реализованы интерфейсы для `cases` слоя;
+5. Студент понимает принципы инверсии, понимает, что не нужно внедрять сейчас конкретную реализацию, достаточно обогащать интерфейс необходимыми методами;
+6. Студент понимает валидацию параметров интерфейсов в конструкторе `service`.
+7. Студент понимает, что `service` это не реализация какого-нибудь интерфейса, а самостоятельная реализация, которая включает в себя объекты, удовлетворяющие заданным интерфейсам.
+
+**Задание на следующую итерацию**
+
+1. Реализация `cases` слоя
+2. Четкое понимание реализации методов, задействующих `storage` и `provider`
+3. Внедрение `gomock`, генерация моков c помощью аннотаций
+4. Покрытие кода `cases` слоя тестами
+
+**Контрольные вопросы**
+
+- Почему необходимо валидировать объекты интерфейсов?
+- Может ли entities слой знать что-нибудь о слое cases?
+- Может ли слой cases знать что-нибудь об entities?
+- Для чего нужны моки? Почему нельзя обойтись без них?
+- В каком виде мы передаем информацию, например, возвращаем слайсы с монетами, в виде копий или в виде указателей? Как обосновывается выбор?
+
+**Примерная диаграмма последовательностей выполнения запроса**
+на диаграмме представлен полный Flow при запросе от клиента, затрагивающий все слои приложения, можно использовать его в качестве основы написания бизнес-логики и адаптеров, но важно помнить, что реализация в любом случае всегда может быть и должна быть оптимизирована.
+
+```mermaid
+sequenceDiagram
+autonumber
+
+actor Client as HTTP Client
+
+box port
+participant HTTP as PublicHTTPServer
+end
+
+box cases
+participant Service
+end
+
+box adapters
+participant PG as StorageAdapter (pg)
+participant CC as ProviderAdapter (cryptocompare.com)
+end
+
+
+
+box infrastructure
+participant DB as PostgreSQL
+participant API as CryptoCompare API
+end
+
+Note over HTTP: Слой портов — знает только<br/>интерфейс ports.Service
+
+Client->>HTTP: POST /crypto/v1/rates<br/>{"titles": ["BTC","ETH"]}
+HTTP->>HTTP: json.Decode → TitlesDTO
+HTTP->>Service: GetActualRates(ctx, ["BTC","ETH"])
+
+Note over Service: Слой бизнес-логики — работает<br/>только с интерфейсами<br/>cases.Storage и cases.Provider
+
+Service->>PG: GetAllTitles(ctx)
+
+Note over PG: Адаптер — реализует<br/>интерфейс cases.Storage,<br/>знает о PostgreSQL
+
+PG->>DB: SELECT DISTINCT titles FROM coins
+DB-->>PG: rows: BTC
+ALT: В хранилище есть не все из запрашиваемых titles
+PG-->>Service: []string{BTC}
+
+Note over Service: Определяем отсутствующие монеты:<br/>запрошено 2, получено 1 → missing = [ETH]
+
+Service->>CC: GetActualRates(ctx, ["ETH"])
+
+Note over CC: Адаптер — реализует<br/>интерфейс cases.Provider,<br/>знает о CryptoCompare API
+
+CC->>API: GET /data/pricemulti<br/>?fsyms=ETH&tsyms=USD
+API-->>CC: {"ETH": {"USD": 142.50}}
+CC-->>Service: []*Coin{ETH}
+
+Note over Service: Сохраняем актуальные данные<br/>от провайдера в хранилище
+
+Service->>PG: Store(ctx, []*Coin{ETH})
+
+PG->>DB: INSERT INTO crypto.coins (title, cost, actual_at) <br/>values ($1, $2, $3)
+DB-->>PG: OK
+PG-->>Service: nil
+END
+
+Note over Service: Теперь мы уверены, что в хранилище<br/>есть все запрашиваемые монеты
+
+Service ->> PG: GetCoins(ctx, []string{BTC, ETH})
+PG ->> DB: SELECT DISTINCT ON (c.title) c.title, c.cost, c.actual_at <br/>FROM crypto.coins c <br/>WHERE c.title = ANY($1) ORDER BY c.title, c.actual_at DESC
+DB -->> PG: rows (BTC data, ETH data)
+PG ->> PG: newCoin from (BTC data, ETH data)
+PG -->> Service: []*entities.Coin{BTC, ETH}
+Service-->>HTTP: []*Coin{BTC, ETH}
+HTTP->>HTTP: json.Marshal → CoinsDTO
+HTTP-->>Client: 200 OK<br/>{"coins":[{"title":"BTC",...},<br/>{"title":"ETH",...}]}
+```
+
+# Итерация №3. Adapters - Provider
+
+**Задача встречи**
+
+1. Проверка `cases` слоя
+2. Проверка тестов, бизнесс-логика должна быть покрыта на 100% (студент понимает, как работают моки, в идеале, если есть табличные тесты)
+3. Реализация клиента на базе` cryptocompare.com API` или другого сервиса.
+4. Посмотреть базовые примеры запросов
+5. Рассказать про `url` и `query`-параметры. Про то, как они задаются в Go при помощи пакета `url`, про то, что недопустимо вставлять параметры с использованием обычной конкатенации или форматирования
+6. Объяснить, что такое `POC` как его можно создать для проверки реализации клиента.
+7. Показать паттерн options и как его можно применить при реализации адаптера клиента для конкретного провайдера.
+
+**Результат**
+
+1. `сases` слой приведен в порядок;
+2. Есть понимание работы с моками, их настройкой
+3. Рассмотрен пример работы со сторонним клиентом
+4. Есть понимание того, как нужно устанавливать `query` параметры в запросе
+
+**Задачи**
+
+1. Реализация адаптера клиента с проверкой на поке (`POC - proof of concept`). Клиент должен имплементировать интерфейс провайдера.
+2. Устранение выявленных проблем
+3. Для автоматизации процесса запуска docker-compose и, в дальнейшем других систем, нужно установить утилиты для автоматизации: или `taskfile` или `makefile` разобрались с тем, как создавать задачи, добавили запуск тестов по команде.
+4. Разобраться с запуском Docker-контейнера с `postgres`, используем `docker-compose`, использовать Volumes не нужно, но обязательно надо изучить, что это такое
+5. В `taskfile/make` настроить запуск контейнера с БД, выключение и пересоздание контейнера.
+
+**Контрольные вопросы**
+
+- почему нельзя просто конкатенировать query параметры в запрос?
+- для чего нужен POC?
+- если сайт cryptocompare закроется или изменит политику пользования, то что делать? и на каком пакете это отразиться? Отразится ли это на бизнес-логике?
+- что такое паттерн options в go? на чем основывается, конкретно в твоем случае, как он применяется?
+
+# Итерация №4. Adapters - Storage
+
+**Задача встречи**
+
+1. Проверка адаптера `client`
+2. Проверка запуска `docker-compose` с инстансом `postgres`
+3. Проверка `taskfile/make`, студент понимает как запускать/выключать с помощью команд
+4. Помочь в написании миграций для создания в БД таблицы с нужными полями.
+5. Особое внимание уделить правилам создания миграций, должно быть по две миграции нивелирующие друг друга: если мы создаем таблицу, то в миграции .up.sql прописываются запросы на создание, а в аналогичной миграции с суффиксом .down.sql удаление этой таблицы.
+6. Установить утилиту `gomigrate` [здесь](https://github.com/golang-migrate/migrate)
+7. Настроить миграции с запуском `docker-compose`, чтобы при старте, они накатывались для этого использовать `taskfile/make`
+8. Реализация структуры и имплементация интерфейса `Storage` для адаптера `Postgres`
+9. Упоминание про `SQL` инъекции в контексте использования плейсхолдеров.
+
+**Результат**
+
+1. Адаптер клиента работает
+2. БД поднимается при запуске docker-compose
+3. Накатываются миграции
+4. Реализован проект адаптера для `postgres`
+5. Понимание проблемы `SQL` инъекций
+
+**Задачи**
+
+1. Реализация адаптера `postgres`, ручная проверка всех запросов в работе БД
+2.  - Написать L1 тесты для проверки работы с реальной БД, для этого, сначала просто написать тесты, которые будут работать с адаптером и БД, а затем промаркировать эти тесты тегом: L1_TEST, добвить этот тег в go build и go test, убедиться, что тесты с тегом стартуют только при соответствующих флагах в команде. Добавить прогон L1 тестов в команду `taskfile/make`
+
+**Примечание**:
+Желательно накатывать миграции с помощью библиотеки "github.com/golang-migrate", а не через docker-compose файл, с заброской конкретных миграций:
+
+```yaml
+volumes:
+	- ./deployment/migrations/postgres:/docker-entrypoint-initdb.d
+```
+
+на первый взгляд, это кажется сложнее, но студент получит положительный опыт, поскольку, научиться делать это более профессионально.
+
+**Контрольные вопросы**
+
+- Зачем закрывать соединение с БД? Когда это нужно делать? Как реализован этот механизм?
+- Для чего нужны парные миграции up и down? Всегда ли в миграциях up выполняются только созидающие действия, такие как добавление полей таблицы, создание таблиц?
+- Для чего нужны констрейнты в миграциях `IF EXIST` и `IF NOT EXIST`?
+- В чем проблема в том, чтобы просто нумеровать миграции с 1 и каждый раз увеличивать на 1?
+- Что делать, если порядок миграций нарушился? Как с помощью gomigrate этот вопрос можно решить? Что делать, если есть доступ к самой БД, что можно сделать, чтобы удалить все миграции и начать с чистого листа?
+- Могу ли я подключиться с использованием UI к БД и посмотреть, созданную мной таблицу? Как это сделать?
+-   - Зачем тегировать тесты, использующие инфраструктуру?
+
+# Итерация №5. Ports - Public Server
+
+**Задача встречи**
+
+1. Проверка адаптера `storage`, в т.ч проверка на корректность выполнения запросов к БД
+2. Проверка L1 тестов, если нужно помочь с настройкой тегов
+3. Разработка структуры сервера
+4. Объяснение концепции `data transfer object`
+5. Разработка `dto` для `request`, `response`, `errorResponse`
+6. Обсуждение спецификации OpenAPI, [инструментов для генерации спеки ](https://github.com/swaggo/swag)
+7. Внедрение аннотаций сваггера для проекта и одного из хендлеров
+8. Генерация спеки на основе аннотаций из предыдущего пункта
+
+**Результат**
+
+1. Завершение слоя с адаптерами
+2. Согласование спеки, понимание того, что студент разобрался с этим
+3. Готовый скелет сервера
+4. Готовая аннотация сваггера для проекта и описание одной из ручек
+
+**Задачи**
+
+1. Дописать все необходимые методы порта, для агрегированного запроса разобраться с тем, что такое enum параметры, а так же внедрить url параметр` {aggregate_type}` в виде `min`, `max` или `avg`
+2. Добавить описание `OpenAPI` ко всем методам порта
+3. Перегенерировать спеку, чтобы в ней отображались все текущие методы
+4.  - Внедрить middlware которая будет обогащать контекст запроса таймаутом, через конфигурационный параметр, чтобы в случае долгой обработки, контекст срабатывал и запрос прерывался
+
+**Контрольные вопросы**
+
+- чем `url` параметры отличаются от `query`?
+- почему использовать метод `get` для запросов криптовалют - это не самая лучшая идея?
+- для чего необходимо обрабатывать ошибки на уровне порта? Что было бы, если бы ошибок были сотни разновидностей?
+- что такое middleware? Для чего используется, какие еще бывают сценарии его применения?
+- зачем нужна сваггер спецификация?
+
+# Итерация №6. Configuration-Application
+
+1. Проверить новую спеку, убедиться в том, что в ней есть все методы порта
+2. Подготовить адаптер - config, который позволит считывать конфигурационный .yaml файл, для этого целесообразно воспользоваться или `knoaf` или `viper`.
+3. Собрать инстанс приложения на слое `application`, сделать вызов через `main.go`
+4. Добиться того, чтобы сервис поднялся
+5. С помощью cron-job реализовать метод, который позволит актуализировать данные в БД по всем, имющимся наименованиям монет.
+
+**Результат**
+
+1. Доработаный слой портов
+2. Полная сгенерированная спека
+3. Запуск инстанса
+
+**Задачи**
+
+1. Отладка, проверка всех методов
+2. Запуск инстанса через `docker-compose` с зависимостью от `storage` (корректировка `connection string` для запуска адаптера БД)
+3. Вынос настроечных параметров в конфигурационный файл
+4. Внедрение логгера, конфигурация slog
+5. Установка линтера golangci-lint
+6. Создание pipeline с прогоном тестов, прогоном линтера, сборкой приложения на платформе `github actions`/`gitlab runner`
+7. Подготовка к демо
+
+**Контрольные вопросы**
+
+- что такое чистая архитектура, как она реализована, лучше ли она стала понятна в сравнении со стартом проекта?
+- что делать, чтобы быстро мигрировать на другой внешний провайдер/СУБД?
+- что было самым сложным в проекте?
+- если сервер возвращает 500 ошибки, то что можно сделать, чтобы решить эту проблему?
+
+# Итерация №7. Demo
+
+провередение демо, с объяснением своих решений, открытий, ответами на вопросы
+
+**Примечание**
+Помимо студентов, которые своевременно осваивают материал, есть еще две категории: опережающие и отстающие. И, если опережающие - это как правило, ребята замотивированные и готовые уделять учебе силы и время и им интересно, то отстающие, как правило, сами ничего не делают, живут от созвона к созвону и делегируют все ChatGPT. Для таких студентов, чтобы понять, чему они научились, нужно давать дополнительные задания:
+
+1. Реализовать через паттерн декоратор кеш с подключением редиса
+2. Подключение prometheus/grafana и настройка дашбордов и метрик
+3. Подключение брокера сообщений и написание второго сервиса, который будет слать сообщения в специальный бот
+4. Подключение трассировщика, через otel-jaeger
+5. Написание автотестов (l2)
+
+Каждое из заданий - это арихтектурная задача, студенту надо предоставить ее декомпозицию и диаграммы классов и последовательностей
+
+# Интеграция кеша
+
+Для интеграции кеша очень удобно использовать паттерн (декоратор), при его использовании, текущий код практически не меняется, и все дополнительные интеграции легко внедряются и включаются в работу
+
+## Доработанная диаграмма классов
+
+```mermaid
+classDiagram
+    Storage .. Coin: use
+    Provider .. Coin: use
+    Service *-- Storage
+    Service *-- Provider
+    PostgresStorage ..|> Storage
+    CryptoCompareProvider ..|> Provider
+    Service ..|> UseCaseProvider
+    Public *--UseCaseProvider
+    WrappedService ..|> UseCaseProvider
+    WrappedService *-- CacheProvider
+    RedisCache ..|> CacheProvider
+
+    namespace entities {
+        class Coin{
+        -title string
+        -cost float64
+        -actualAt time.Time
+
+        +Title() string
+        +Cost() float64
+        +ActualAt() time.Time
+        }
+    }
+
+    namespace cases{
+        class Storage {
+            <<interface>>
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +Store(ctx context.Context, coins []*entities.Coin) error
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+        }
+
+        class Provider {
+            <<interface>>
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+        }
+
+        class CacheProvider {
+            <<interface>>
+            +StoreEvent(ctx context.Context, type string, key string, value any)
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +Flush(ctx context.Context) error
+        }
+
+         class UseCaseProvider{
+            <<interface>>
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregateRates(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +ActualizeRates(ctx context.Context) error
+        }
+
+        class WrappedService {
+            -service Service
+            -cache CacheProvider
+
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregateRates(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +ActualizeRates(ctx context.Context) error
+        }
+
+        class Service {
+            -provider Provider
+            -storage Storage
+
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregateRates(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +ActualizeRates(ctx context.Context) error
+
+            -processUnstoredTitles(ctx context.Context, titles []string) error
+        }
+    }
+
+    namespace adapters{
+        class PostgresStorage{
+            -db *pgxpool.Pool
+
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +Store(ctx context.Context, coins []*entities.Coin) error
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            -processRows(ctx context.Context, query string, params []any) ([]*entities.Coin, error)
+        }
+
+        class CryptoCompareProvider {
+            -client *http.Client
+
+            +GetActualRates(ctx context.Context, titles []string) ([]*entities.Coin, error)
+        }
+
+        class RedisCache {
+            -rdb *redis.Client
+
+            +StoreEvent(ctx context.Context, type string, key string, value any)
+            +GetAllTitles(ctx context.Context)([]string, error)
+            +GetCoins(ctx context.Context, titles []string) ([]*entities.Coin, error)
+            +GetAggregatedCoins(ctx context.Context, titles []string, aggType string) ([]*entities.Coin, error)
+            +Flush(ctx context.Context) error
+        }
+    }
+
+    namespace port{
+
+
+        class Public{
+            router *http.Server
+
+            -actualRates(resp http.ResponseWriter, req *http.Request)
+            -aggregatedRates(resp http.ResponseWriter, req *http.Request)
+        }
+    }
+
+```
+
+диаграмма последовательностей должна отображать следующее, каждый запрос сначала попадает на декоратор, если запрос на чтение, то он пробует получить значение из кеша, и если ему это удается, то дальнейший flow не выполняется, если в кеше данных нет, выполняется логика, как она выполнялась ранее, но перед возвратом значения, производиться запись в кеш. Запрос на запись приводит к принудительной инвалидации кеша.

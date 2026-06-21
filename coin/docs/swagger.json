@@ -1,0 +1,181 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a server for crypto rates",
+        "title": "Crypto Service API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "email": "parta4ok@gmail.com"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/crypto/v1",
+    "paths": {
+        "/rates": {
+            "post": {
+                "description": "Returns the rates of the requested cryptocurrencies in JSON format.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "crypto"
+                ],
+                "summary": "Getting rates of requested cryptocurrencies",
+                "parameters": [
+                    {
+                        "description": "list of required titles",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TitlesDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "list of coins",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CoinsDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    },
+                    "404": {
+                        "description": "not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/rates/{aggregation_type}": {
+            "post": {
+                "description": "Returns aggregated the rates of the requested cryptocurrencies in JSON format.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "crypto"
+                ],
+                "summary": "Getting aggregated rates of requested cryptocurrencies",
+                "parameters": [
+                    {
+                        "enum": [
+                            "min",
+                            "max",
+                            "avg"
+                        ],
+                        "type": "string",
+                        "description": "aggregation type",
+                        "name": "aggregation_type",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "list of required titles",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TitlesDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "list of coins",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CoinsDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    },
+                    "404": {
+                        "description": "not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorDTO"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.CoinDTO": {
+            "type": "object",
+            "properties": {
+                "actual_at": {
+                    "type": "string"
+                },
+                "cost": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CoinsDTO": {
+            "type": "object",
+            "properties": {
+                "coins": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CoinDTO"
+                    }
+                }
+            }
+        },
+        "dto.ErrorDTO": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.TitlesDTO": {
+            "type": "object",
+            "properties": {
+                "titles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
