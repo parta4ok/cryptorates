@@ -45,25 +45,25 @@ func main() {
 func runMigration(task migrator.MigrationTask) error {
 	db, err := sql.Open(PgType, task.ConnectionString)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck //ok
 	}
 	defer db.Close() //nolint:errcheck //skip
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck //ok
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		task.MigrationPath,
 		PgType, driver)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck //ok
 	}
 	defer m.Close() //nolint:errcheck //skip
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return err
+		return err //nolint:wrapcheck //ok
 	}
 
 	return nil

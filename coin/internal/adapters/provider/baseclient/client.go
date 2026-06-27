@@ -92,7 +92,7 @@ func (bc *BaseClient) GetActualRates(
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return bc.ratesSource.ParseResponseData(ctx, resp.Body, bc.costIn)
+		return bc.ratesSource.ParseResponseData(ctx, resp.Body, bc.costIn) //nolint:wrapcheck //ok
 	case http.StatusBadRequest:
 		respErr = entities.ErrInvalidParam
 	case http.StatusNotFound:

@@ -1,0 +1,60 @@
+version: "2"
+
+run:
+    go: "1.26"
+    timeout: 5m
+    modules-download-mode: readonly
+
+output:
+    formats:
+        text:
+            print-linter-name: true
+            print-issued-lines: true
+            colors: true
+
+linters:
+    enable:
+        - govet
+        - gocyclo
+        - wrapcheck
+        - goconst
+        - misspell
+        - staticcheck
+        - unused
+        - errcheck
+        - testifylint
+        - bodyclose
+        - gocritic
+        - funlen
+        - gocognit
+        - dupl
+        - lll
+        - nestif
+        - nilerr
+        - gosec
+    settings:
+        lll:
+            line-length: 100
+    exclusions:
+        rules:
+            - path: _test\.go
+              linters:
+                  - gocyclo
+                  - goconst
+                  - funlen
+                  - errcheck
+                  - dupl
+                  - gosec
+                  - lll
+            - path: test/
+              linters:
+                  - gocyclo
+                  - errcheck
+                  - dupl
+                  - gosec
+                  - lll
+                  - funlen
+formatters:
+    enable:
+        - gofmt
+        - goimports

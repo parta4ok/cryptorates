@@ -11,5 +11,5 @@ type Config interface {
 	JaegerEndpoint() string
 	MetricsPort() string
 	MetricsTimeout() time.Duration
-	GracefullShutdownTimeout() time.Duration
+	GracefulShutdownTimeout() time.Duration
 }

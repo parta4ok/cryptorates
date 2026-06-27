@@ -22,5 +22,5 @@ tracing:
 metrics:
     port: 8083
     timeout: 3s
-gracefull_shutdown:
+graceful_shutdown:
     timeout: 5s

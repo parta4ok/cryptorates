@@ -32,4 +32,19 @@ tasks:
         desc: "stop crypto_rates containers"
         cmds:
             - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile services down
-
+    test:l0:
+        desc: "run unit tests"
+        cmds:
+            - go test -count=1 ./...
+    test:l1:
+        desc: "run L1 tests (postgres + migrator required)"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l1 up -d
+            - defer: docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l1 down
+            - go test -count=1 -tags TEST_L1 ./...
+    test:l2:
+        desc: "run L2 tests (full stack required)"
+        cmds:
+            - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l2 up -d
+            - defer: docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l2 down --volumes
+            - go test -count=1 -tags TEST_L2 ./...

@@ -83,6 +83,6 @@ func (cfg *Config) MetricsTimeout() time.Duration {
 	return cfg.Duration("metrics.timeout")
 }
 
-func (cfg *Config) GracefullShutdownTimeout() time.Duration {
-	return cfg.Duration("gracefull_shutdown.timeout")
+func (cfg *Config) GracefulShutdownTimeout() time.Duration {
+	return cfg.Duration("graceful_shutdown.timeout")
 }
