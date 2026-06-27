@@ -39,7 +39,7 @@ func NewCoin(title string, cost float64, opts ...CoinOption) (*Coin, error) {
 		return nil, errors.Wrap(ErrInvalidParam, "title not set")
 	}
 
-	if coin.cost < 0.0 {
+	if coin.cost <= 0.0 {
 		return nil, errors.Wrap(ErrInvalidParam, "cost must be greater then 0.0")
 	}
 

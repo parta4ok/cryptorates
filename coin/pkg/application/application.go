@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -131,5 +132,5 @@ func (app *App) actualizeRates() {
 }
 
 func (app *App) fatal(err error) {
-	panic(err)
+	log.Fatal(err)
 }

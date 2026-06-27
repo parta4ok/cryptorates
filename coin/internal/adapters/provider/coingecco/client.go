@@ -72,8 +72,6 @@ func (c *Client) GetRequestData(
 		return nil, err
 	}
 
-	slog.Info(url.String())
-
 	return req, nil
 }
 

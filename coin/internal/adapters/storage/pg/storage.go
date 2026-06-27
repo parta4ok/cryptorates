@@ -165,6 +165,7 @@ func (storage *Storage) processRows(
 		slog.Error("Query", "err", err)
 		return nil, err
 	}
+	defer rows.Close()
 
 	coins := make([]*entities.Coin, 0)
 	for rows.Next() {
@@ -190,6 +191,13 @@ func (storage *Storage) processRows(
 		}
 
 		coins = append(coins, coin)
+	}
+
+	if rows.Err() != nil {
+		err := errors.Wrapf(entities.ErrInternal, "process rows err: %v", rows.Err())
+		span.SetError(err)
+		slog.Error("processRows", "err", err)
+		return nil, err
 	}
 
 	if len(coins) == 0 {
