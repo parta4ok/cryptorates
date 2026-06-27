@@ -26,7 +26,7 @@ func TestNewCoin(t *testing.T) {
 		resErr  error
 	}{
 		{
-			name: "invalit title",
+			name: "invalid title",
 			args: args{
 				title: "",
 				cost:  1.1,
@@ -36,7 +36,7 @@ func TestNewCoin(t *testing.T) {
 			resErr:  entities.ErrInvalidParam,
 		},
 		{
-			name: "invalit cost",
+			name: "invalid cost",
 			args: args{
 				title: "BTC",
 				cost:  -1.1,
@@ -46,7 +46,7 @@ func TestNewCoin(t *testing.T) {
 			resErr:  entities.ErrInvalidParam,
 		},
 		{
-			name: "invalit actualAt",
+			name: "invalid actualAt",
 			args: args{
 				title: "BTC",
 				cost:  1.1,
