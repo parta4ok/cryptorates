@@ -61,7 +61,7 @@ func (s *Server) Stop(ctx context.Context) error {
 
 	if err := s.router.Shutdown(ctx); err != nil {
 		slog.Error("server shutdown", "error", err)
-		return err
+		return err //nolint:wrapcheck //ok
 	}
 
 	return nil

@@ -54,7 +54,7 @@ func (c *Client) GetRequestData(
 	query.Set(queryFsyms, strings.Join(titles, ","))
 	query.Set(queryTsyms, costIn)
 	url.RawQuery = query.Encode()
-	return http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
+	return http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil) //nolint:wrapcheck //ok
 }
 
 func (c *Client) ParseResponseData(

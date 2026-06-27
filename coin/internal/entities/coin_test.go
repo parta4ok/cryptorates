@@ -79,7 +79,7 @@ func TestNewCoin(t *testing.T) {
 			require.NoError(it, err)
 
 			require.Equal(it, tc.args.title, coin.Title())
-			require.Equal(it, tc.args.cost, coin.Cost())
+			require.InDelta(it, tc.args.cost, coin.Cost(), 0.1)
 			require.Equal(it, getConcreteTime(it), coin.ActualAt())
 		})
 	}

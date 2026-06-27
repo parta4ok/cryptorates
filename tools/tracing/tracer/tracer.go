@@ -45,7 +45,7 @@ func Init(
 		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck //ok
 	}
 
 	res, err := resource.New(ctx,
@@ -55,7 +55,7 @@ func Init(
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck //ok
 	}
 
 	tp := sdktrace.NewTracerProvider(

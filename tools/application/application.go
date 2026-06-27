@@ -80,7 +80,7 @@ func (b *Builder) AddWaiters(waiters ...func(context.Context) error) *Builder {
 }
 
 func (b *Builder) Build() *BaseApplication {
-	b.app.shutdownTimeout = b.cfg.GracefullShutdownTimeout()
+	b.app.shutdownTimeout = b.cfg.GracefulShutdownTimeout()
 	return b.app
 }
 
