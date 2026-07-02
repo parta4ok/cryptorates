@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 
 RUN golangci-lint run -c /common/.golangci.yml
-RUN go test ./...
+RUN go test -race ./...
 
 FROM builder AS coin_builder
 WORKDIR /common/coin
