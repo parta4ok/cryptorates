@@ -48,3 +48,43 @@ tasks:
             - docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l2 up -d
             - defer: docker compose -p crypto_rates -f ./build/docker/docker-compose.yaml --profile l2 down --volumes
             - go test -count=1 -tags TEST_L2 ./...
+
+    pprof:heap:
+        desc: "open heap profile in browser (memory usage right now). usage: task pprof:heap METRICS_PORT=8083 UI_PORT=8090"
+        cmds:
+            - go tool pprof -http=:{{.UI_PORT}} http://localhost:{{.METRICS_PORT}}/debug/pprof/heap
+        vars:
+            METRICS_PORT: '{{.METRICS_PORT | default "8083"}}'
+            UI_PORT: '{{.UI_PORT | default "8090"}}'
+
+    pprof:allocs:
+        desc: "open allocs profile in browser (all allocations since start, including GC-collected). usage: task pprof:allocs METRICS_PORT=8083 UI_PORT=8090"
+        cmds:
+            - go tool pprof -http=:{{.UI_PORT}} http://localhost:{{.METRICS_PORT}}/debug/pprof/allocs
+        vars:
+            METRICS_PORT: '{{.METRICS_PORT | default "8083"}}'
+            UI_PORT: '{{.UI_PORT | default "8090"}}'
+
+    pprof:cpu:
+        desc: "collect CPU profile for 30s then open in browser (where the CPU spends time). usage: task pprof:cpu METRICS_PORT=8083 UI_PORT=8090"
+        cmds:
+            - go tool pprof -http=:{{.UI_PORT}} http://localhost:{{.METRICS_PORT}}/debug/pprof/profile?seconds=30
+        vars:
+            METRICS_PORT: '{{.METRICS_PORT | default "8083"}}'
+            UI_PORT: '{{.UI_PORT | default "8090"}}'
+
+    pprof:goroutine:
+        desc: "open goroutine profile in browser (all running goroutines and their stacks). usage: task pprof:goroutine METRICS_PORT=8083 UI_PORT=8090"
+        cmds:
+            - go tool pprof -http=:{{.UI_PORT}} http://localhost:{{.METRICS_PORT}}/debug/pprof/goroutine
+        vars:
+            METRICS_PORT: '{{.METRICS_PORT | default "8083"}}'
+            UI_PORT: '{{.UI_PORT | default "8090"}}'
+
+    pprof:trace:
+        desc: "collect runtime trace for 5s then open in browser (goroutine scheduling, GC pauses, syscalls). usage: task pprof:trace METRICS_PORT=8083 UI_PORT=8090"
+        cmds:
+            - curl -o /tmp/trace.out http://localhost:{{.METRICS_PORT}}/debug/pprof/trace?seconds=5
+            - go tool trace /tmp/trace.out
+        vars:
+            METRICS_PORT: '{{.METRICS_PORT | default "8083"}}'
