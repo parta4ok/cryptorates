@@ -35,7 +35,7 @@ tasks:
     test:l0:
         desc: "run unit tests"
         cmds:
-            - go test -count=1 ./...
+            - go test -count=1 -race ./...
     test:l1:
         desc: "run L1 tests (postgres + migrator required)"
         cmds:
