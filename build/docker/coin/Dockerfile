@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26 AS builder
 
 WORKDIR /common
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
@@ -13,7 +13,7 @@ RUN go test -race ./...
 
 FROM builder AS coin_builder
 WORKDIR /common/coin
-RUN go build -o ./cmd/app/coin ./cmd/app/main.go
+RUN CGO_ENABLED=0 go build -o ./cmd/app/coin ./cmd/app/main.go
 
 FROM alpine:latest AS coin_service
 WORKDIR /app
